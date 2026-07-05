@@ -1,7 +1,7 @@
 {
-  "name": "@carbonenginejs/reader-hlsl",
+  "name": "@carbonenginejs/format-hlsl",
   "version": "0.1.0",
-  "description": "CarbonEngineJS Tr2 effect container reader. Parses CCP's compiled effect files (permutation axes, techniques, passes and shader stage metadata) and emits JSON or raw graph objects for shader translation backends.",
+  "description": "CarbonEngineJS Tr2 effect container format package. Parses CCP's compiled effect files (permutation axes, techniques, passes and shader stage metadata) and emits JSON or raw graph objects for shader translation backends.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -17,7 +17,7 @@
   },
   "keywords": [
     "carbonenginejs",
-    "reader-hlsl",
+    "format-hlsl",
     "tr2",
     "trinity",
     "effect",
@@ -37,11 +37,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/carbonenginejs/reader-hlsl.git"
+    "url": "git+https://github.com/carbonenginejs/format-hlsl.git"
   },
-  "homepage": "https://github.com/carbonenginejs/reader-hlsl#readme",
+  "homepage": "https://github.com/carbonenginejs/format-hlsl#readme",
   "bugs": {
-    "url": "https://github.com/carbonenginejs/reader-hlsl/issues"
+    "url": "https://github.com/carbonenginejs/format-hlsl/issues"
   },
   "publishConfig": {
     "access": "public"

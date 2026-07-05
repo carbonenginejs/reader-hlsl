@@ -1,5 +1,5 @@
 /**
- * Exposed CarbonEngineJS-facing Tr2 effect container reader class.
+ * Exposed CarbonEngineJS-facing Tr2 effect container format class.
  *
  * Keep this file small and reviewable: the Tr2 effect graph parser lives
  * under src/core/tr2 (internal parsing machinery, not part of this
@@ -22,14 +22,14 @@ import {
     validateClassKey
 } from "./core/helpers.js";
 
-const READER_NAME = "CjsHlslReader";
+const FORMAT_NAME = "CjsFormatHlsl";
 
 /**
  * CarbonEngineJS-facing reader for CCP's Tr2 compiled effect container
  * format (`.sm_hi` / `.sm_lo` / `.sm_depth` bodies).
  *
- * The Cjs prefix marks this as a JavaScript reader/construction boundary.
- * This reader has no dependency on any DXBC/shader-bytecode decoder: shader
+ * The Cjs prefix marks this as a JavaScript format/construction boundary.
+ * This format profile has no dependency on any DXBC/shader-bytecode decoder: shader
  * bodies stay as opaque bytes in the emitted graph. The public contract is
  * plain JSON data (`emit: "json"`, the default) — the documented effect
  * graph shape described in the README. `emit: "raw"` exposes the internal
@@ -37,10 +37,10 @@ const READER_NAME = "CjsHlslReader";
  * internals, useful mainly for resolving multiple permutations by hand.
  *
  * The `classes` option lets a caller register constructors for specific
- * node kinds in the emitted JSON graph (see `CjsHlslReader.CLASS_KEYS`);
+ * node kinds in the emitted JSON graph (see `CjsFormatHlsl.CLASS_KEYS`);
  * this package itself exports no model classes.
  */
-export class CjsHlslReader
+export class CjsFormatHlsl
 {
 
     #emit = DEFAULT_VALUES.emit;
@@ -49,9 +49,9 @@ export class CjsHlslReader
     #classes = DEFAULT_VALUES.classes;
 
     /**
-     * Create a reusable reader profile.
+     * Create a reusable format profile.
      *
-     * @param {object} [options] Default reader values.
+     * @param {object} [options] Default format values.
      */
     constructor(options = {})
     {
@@ -59,14 +59,14 @@ export class CjsHlslReader
     }
 
     /**
-     * Set reader values for this reusable profile.
+     * Set format values for this reusable profile.
      *
      * @param {object} [options] Values to merge into the profile.
-     * @returns {CjsHlslReader} This reader.
+     * @returns {CjsFormatHlsl} This format profile.
      */
     SetValues(options = {})
     {
-        const values = normalizeValues(this.GetValues(), options, READER_NAME);
+        const values = normalizeValues(this.GetValues(), options, FORMAT_NAME);
 
         this.#emit = values.emit;
         this.#source = values.source;
@@ -89,14 +89,14 @@ export class CjsHlslReader
             source: this.#source,
             permutation: this.#permutation,
             classes: this.#classes
-        }, options, READER_NAME);
+        }, options, FORMAT_NAME);
     }
 
     /**
      * Set multiple node-class constructors for this profile.
      *
-     * @param {object} [classes] Map of node class keys to constructors. See {@link CjsHlslReader.CLASS_KEYS}.
-     * @returns {CjsHlslReader} This reader.
+     * @param {object} [classes] Map of node class keys to constructors. See {@link CjsFormatHlsl.CLASS_KEYS}.
+     * @returns {CjsFormatHlsl} This format profile.
      */
     SetClasses(classes = {})
     {
@@ -108,20 +108,20 @@ export class CjsHlslReader
      *
      * @param {string} type Node class key.
      * @param {Function|null|undefined} Class Constructor to use, or nullish to delete.
-     * @returns {CjsHlslReader} This reader.
+     * @returns {CjsFormatHlsl} This format profile.
      */
     SetClass(type, Class)
     {
         if (Class === null || Class === undefined)
         {
-            validateClassKey(type, READER_NAME);
+            validateClassKey(type, FORMAT_NAME);
             const classes = { ...this.#classes };
             delete classes[type];
             this.#classes = classes;
             return this;
         }
 
-        validateClass(type, Class, READER_NAME);
+        validateClass(type, Class, FORMAT_NAME);
         return this.SetValues({ classes: { [type]: Class } });
     }
 
@@ -133,7 +133,7 @@ export class CjsHlslReader
      */
     GetClass(type)
     {
-        validateClassKey(type, READER_NAME);
+        validateClassKey(type, FORMAT_NAME);
         return this.#classes[type];
     }
 
@@ -174,9 +174,9 @@ export class CjsHlslReader
     }
 
     /**
-     * Convert reader output to JSON-compatible data.
+     * Convert format output to JSON-compatible data.
      *
-     * @param {any} value Reader output to convert.
+     * @param {any} value Format output to convert.
      * @returns {any} Plain JSON-compatible data.
      */
     ToJSON(value)
@@ -211,30 +211,30 @@ export class CjsHlslReader
      * Static one-shot read.
      *
      * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect container bytes.
-     * @param {object} [options] Reader values.
+     * @param {object} [options] Format values.
      * @returns {Tr2EffectRes|object} The raw Tr2EffectRes instance, or the documented JSON graph when emit is "json".
      */
     static read(input, options = {})
     {
-        return readWithValues(input, normalizeValues(DEFAULT_VALUES, options, READER_NAME));
+        return readWithValues(input, normalizeValues(DEFAULT_VALUES, options, FORMAT_NAME));
     }
 
     /**
      * Static one-shot inspection.
      *
      * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect container bytes.
-     * @param {object} [options] Reader values.
+     * @param {object} [options] Format values.
      * @returns {object} Plain summary data.
      */
     static inspect(input, options = {})
     {
-        return inspectWithValues(input, normalizeValues(DEFAULT_VALUES, options, READER_NAME));
+        return inspectWithValues(input, normalizeValues(DEFAULT_VALUES, options, FORMAT_NAME));
     }
 
     /**
      * Static JSON-compatible conversion.
      *
-     * @param {any} value Reader output to convert.
+     * @param {any} value Format output to convert.
      * @returns {any} Plain JSON-compatible data.
      */
     static toJSON(value)
@@ -246,20 +246,20 @@ export class CjsHlslReader
      * Node-only convenience: reads a compiled Tr2 effect file from disk.
      *
      * @param {string} path Path to a compiled Carbon effect file (`.sm_hi` etc.).
-     * @param {object} [options] Reader values.
+     * @param {object} [options] Format values.
      * @returns {Promise<Tr2EffectRes|object>} The raw Tr2EffectRes instance, or the documented JSON graph when emit is "json".
      */
     static async readFile(path, options = {})
     {
         if (typeof path !== "string" || !path)
         {
-            throw new TypeError(`${READER_NAME}: readFile path must be a non-empty string`);
+            throw new TypeError(`${FORMAT_NAME}: readFile path must be a non-empty string`);
         }
 
         const { readFile } = await import("node:fs/promises");
         const input = await readFile(path);
 
-        return readWithValues(input, normalizeValues(DEFAULT_VALUES, { source: path, ...options }, READER_NAME));
+        return readWithValues(input, normalizeValues(DEFAULT_VALUES, { source: path, ...options }, FORMAT_NAME));
     }
 
     static OUTPUT_JSON = OUTPUT_JSON;
@@ -268,4 +268,4 @@ export class CjsHlslReader
 
 }
 
-export default CjsHlslReader;
+export default CjsFormatHlsl;

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { CjsHlslReader } from "../src/index.js";
+import { CjsFormatHlsl } from "../src/index.js";
 
 /**
  * Optional corpus sweep: parses every `.sm_hi` compiled effect file found
@@ -49,7 +49,7 @@ test(
             try
             {
                 // Default emit: "json" — the documented plain effect graph.
-                const result = CjsHlslReader.read(bytes, { source: filePath });
+                const result = CjsFormatHlsl.read(bytes, { source: filePath });
                 permutations += result.permutations.length;
 
                 if (result.effect)

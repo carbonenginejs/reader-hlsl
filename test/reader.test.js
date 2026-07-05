@@ -4,14 +4,14 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { CjsHlslReader } from "../src/index.js";
+import { CjsFormatHlsl } from "../src/index.js";
 import { buildEffectBytes } from "./synthetic.js";
 
 test("static read and instance Read share one code path", () =>
 {
     const bytes = buildEffectBytes();
-    const fromStatic = CjsHlslReader.read(bytes, { source: "synthetic" });
-    const fromInstance = new CjsHlslReader({ source: "synthetic" }).Read(bytes);
+    const fromStatic = CjsFormatHlsl.read(bytes, { source: "synthetic" });
+    const fromInstance = new CjsFormatHlsl({ source: "synthetic" }).Read(bytes);
     assert.deepEqual(fromStatic, fromInstance);
 });
 
@@ -25,7 +25,7 @@ test("json emit is the documented plain effect graph", () =>
             options: [ "OPAQUE", "TRANSPARENT" ]
         } ]
     });
-    const result = CjsHlslReader.read(bytes, { source: "synthetic" });
+    const result = CjsFormatHlsl.read(bytes, { source: "synthetic" });
 
     assert.equal(result.version, 8);
     assert.equal(result.bodyCount, 1);
@@ -41,7 +41,7 @@ test("json emit is the documented plain effect graph", () =>
 
 test("raw emit exposes the live Tr2EffectRes graph", () =>
 {
-    const result = CjsHlslReader.read(buildEffectBytes(), { emit: CjsHlslReader.OUTPUT_RAW });
+    const result = CjsFormatHlsl.read(buildEffectBytes(), { emit: CjsFormatHlsl.OUTPUT_RAW });
 
     assert.equal(result.constructor.name, "Tr2EffectRes");
     assert.equal(result.IsGood(), true);
@@ -50,7 +50,7 @@ test("raw emit exposes the live Tr2EffectRes graph", () =>
 
 test("Inspect summarizes the default permutation without a full JSON conversion", () =>
 {
-    const summary = CjsHlslReader.inspect(buildEffectBytes(), { source: "synthetic" });
+    const summary = CjsFormatHlsl.inspect(buildEffectBytes(), { source: "synthetic" });
 
     assert.equal(summary.version, 8);
     assert.equal(summary.isGood, true);
@@ -64,60 +64,60 @@ test("Inspect summarizes the default permutation without a full JSON conversion"
 
 test("profiles hold values and reject invalid emits", () =>
 {
-    const reader = new CjsHlslReader({ emit: CjsHlslReader.OUTPUT_RAW, source: "profile" });
-    assert.equal(reader.GetValues().emit, CjsHlslReader.OUTPUT_RAW);
+    const reader = new CjsFormatHlsl({ emit: CjsFormatHlsl.OUTPUT_RAW, source: "profile" });
+    assert.equal(reader.GetValues().emit, CjsFormatHlsl.OUTPUT_RAW);
     assert.equal(reader.GetValues({ source: "override" }).source, "override");
     assert.equal(reader.GetValues().source, "profile");
-    assert.throws(() => new CjsHlslReader({ emit: "nonsense" }), /emit must be/);
-    assert.throws(() => CjsHlslReader.read(buildEffectBytes(), { emit: "nonsense" }), /emit must be/);
+    assert.throws(() => new CjsFormatHlsl({ emit: "nonsense" }), /emit must be/);
+    assert.throws(() => CjsFormatHlsl.read(buildEffectBytes(), { emit: "nonsense" }), /emit must be/);
 });
 
 test("toJSON converts typed arrays and nested structures", () =>
 {
-    const converted = CjsHlslReader.toJSON({
+    const converted = CjsFormatHlsl.toJSON({
         tokens: new Uint32Array([ 1, 2 ]),
         nested: [ { mask: new Uint8Array([ 3 ]) } ]
     });
     assert.deepEqual(converted, { tokens: [ 1, 2 ], nested: [ { mask: [ 3 ] } ] });
 
-    const reader = new CjsHlslReader();
+    const reader = new CjsFormatHlsl();
     assert.deepEqual(reader.ToJSON(new Uint8Array([ 4, 5 ])), [ 4, 5 ]);
 });
 
 test("isSupported accepts a well-formed header and rejects garbage or truncated data", () =>
 {
-    assert.equal(CjsHlslReader.isSupported(buildEffectBytes()), true);
-    assert.equal(CjsHlslReader.isSupported(new Uint8Array([ 1, 2, 3, 4, 5 ])), false);
-    assert.equal(CjsHlslReader.isSupported(new Uint8Array(0)), false);
-    assert.equal(CjsHlslReader.isSupported(buildEffectBytes({ version: 99 })), false);
+    assert.equal(CjsFormatHlsl.isSupported(buildEffectBytes()), true);
+    assert.equal(CjsFormatHlsl.isSupported(new Uint8Array([ 1, 2, 3, 4, 5 ])), false);
+    assert.equal(CjsFormatHlsl.isSupported(new Uint8Array(0)), false);
+    assert.equal(CjsFormatHlsl.isSupported(buildEffectBytes({ version: 99 })), false);
 });
 
 test("out-of-range version is rejected with a read error", () =>
 {
-    assert.throws(() => CjsHlslReader.read(buildEffectBytes({ version: 99 })), /Tr2EffectRes/);
+    assert.throws(() => CjsFormatHlsl.read(buildEffectBytes({ version: 99 })), /Tr2EffectRes/);
 });
 
 test("truncated header is rejected with a read error", () =>
 {
     const bytes = buildEffectBytes().subarray(0, 2);
-    assert.throws(() => CjsHlslReader.read(bytes));
+    assert.throws(() => CjsFormatHlsl.read(bytes));
 });
 
 test("readFile validates its path argument", async () =>
 {
-    await assert.rejects(() => CjsHlslReader.readFile(123), TypeError);
-    await assert.rejects(() => CjsHlslReader.readFile(""), TypeError);
-    await assert.rejects(() => CjsHlslReader.readFile("does-not-exist.sm_hi"));
+    await assert.rejects(() => CjsFormatHlsl.readFile(123), TypeError);
+    await assert.rejects(() => CjsFormatHlsl.readFile(""), TypeError);
+    await assert.rejects(() => CjsFormatHlsl.readFile("does-not-exist.sm_hi"));
 });
 
 test("readFile reads and parses a compiled effect file from disk", async () =>
 {
-    const dir = await mkdtemp(path.join(tmpdir(), "reader-hlsl-"));
+    const dir = await mkdtemp(path.join(tmpdir(), "format-hlsl-"));
     const filePath = path.join(dir, "synthetic.sm_hi");
     try
     {
         await writeFile(filePath, buildEffectBytes());
-        const result = await CjsHlslReader.readFile(filePath);
+        const result = await CjsFormatHlsl.readFile(filePath);
         assert.equal(result.version, 8);
         assert.equal(result.bodyCount, 1);
     }
@@ -129,7 +129,7 @@ test("readFile reads and parses a compiled effect file from disk", async () =>
 
 test("CLASS_KEYS lists the hydratable node kinds", () =>
 {
-    assert.deepEqual(CjsHlslReader.CLASS_KEYS, [
+    assert.deepEqual(CjsFormatHlsl.CLASS_KEYS, [
         "Root",
         "Permutation",
         "EffectDescription",
@@ -153,7 +153,7 @@ test("classes option hydrates registered node kinds instead of plain objects", (
     const bytes = buildEffectBytes({
         permutations: [ { name: "BLEND_MODE", description: "", defaultOption: 0, options: [ "OPAQUE" ] } ]
     });
-    const result = CjsHlslReader.read(bytes, {
+    const result = CjsFormatHlsl.read(bytes, {
         source: "synthetic",
         classes: { Root: EffectRoot, Permutation: ShaderPermutation }
     });
@@ -168,7 +168,7 @@ test("instance SetClass/SetClasses/GetClass/HasClass manage the node class map",
     class EffectRoot
     {}
 
-    const reader = new CjsHlslReader();
+    const reader = new CjsFormatHlsl();
     assert.equal(reader.HasClass("Root"), false);
     reader.SetClass("Root", EffectRoot);
     assert.equal(reader.HasClass("Root"), true);
@@ -187,6 +187,6 @@ test("instance SetClass/SetClasses/GetClass/HasClass manage the node class map",
 
 test("unknown options and non-object classes are rejected", () =>
 {
-    assert.throws(() => new CjsHlslReader({ nonsense: true }), /unknown option/);
-    assert.throws(() => CjsHlslReader.read(buildEffectBytes(), { classes: 123 }), /classes option must be an object/);
+    assert.throws(() => new CjsFormatHlsl({ nonsense: true }), /unknown option/);
+    assert.throws(() => CjsFormatHlsl.read(buildEffectBytes(), { classes: 123 }), /classes option must be an object/);
 });

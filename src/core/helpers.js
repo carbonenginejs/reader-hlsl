@@ -1,5 +1,5 @@
 /**
- * Internal read-pipeline glue for CjsHlslReader.
+ * Internal read-pipeline glue for CjsFormatHlsl.
  *
  * Keeps the public class file small: input normalization, option/classes
  * normalization, the shared read path used by both the instance and the
@@ -33,7 +33,7 @@ const OPTION_KEYS = new Set([ "emit", "source", "permutation", "classes" ]);
  * @param {string} key Candidate node key.
  * @param {string} [readerName] Reader name used in the thrown error.
  */
-export function validateClassKey(key, readerName = "CjsHlslReader")
+export function validateClassKey(key, readerName = "CjsFormatHlsl")
 {
     if (!CLASS_KEYS.includes(key))
     {
@@ -48,7 +48,7 @@ export function validateClassKey(key, readerName = "CjsHlslReader")
  * @param {Function} Class Candidate constructor.
  * @param {string} [readerName] Reader name used in thrown errors.
  */
-export function validateClass(key, Class, readerName = "CjsHlslReader")
+export function validateClass(key, Class, readerName = "CjsFormatHlsl")
 {
     validateClassKey(key, readerName);
     if (typeof Class !== "function")
@@ -87,14 +87,14 @@ function mergeClasses(base, classes, readerName)
 }
 
 /**
- * Merge reader values over a base set and validate them.
+ * Merge format values over a base set and validate them.
  *
  * @param {object} base Current values.
  * @param {object} [options] Values to merge in.
  * @param {string} [readerName] Reader name used in error messages.
  * @returns {object} A validated copy of the merged values.
  */
-export function normalizeValues(base, options = {}, readerName = "CjsHlslReader")
+export function normalizeValues(base, options = {}, readerName = "CjsFormatHlsl")
 {
     if (!options || typeof options !== "object")
     {
@@ -141,7 +141,7 @@ export function toBytes(input)
     if (input instanceof Uint8Array) return input;
     if (typeof ArrayBuffer !== "undefined" && input instanceof ArrayBuffer) return new Uint8Array(input);
     if (ArrayBuffer.isView(input)) return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-    throw new TypeError("CjsHlslReader: input must be Tr2 effect bytes (Uint8Array, Buffer, DataView or ArrayBuffer)");
+    throw new TypeError("CjsFormatHlsl: input must be Tr2 effect bytes (Uint8Array, Buffer, DataView or ArrayBuffer)");
 }
 
 /**
@@ -151,7 +151,7 @@ export function toBytes(input)
  * JSON shape produced by {@link readWithValues}, not this raw graph.
  *
  * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect payload.
- * @param {object} values Normalized reader values.
+ * @param {object} values Normalized format values.
  * @returns {Tr2EffectRes} The loaded effect resource graph.
  */
 export function readRaw(input, values)
@@ -179,7 +179,7 @@ export function readRaw(input, values)
  * bodies that fail to decode (returns null instead of throwing).
  *
  * @param {Tr2EffectRes} effect Loaded effect resource graph.
- * @param {object} values Normalized reader values.
+ * @param {object} values Normalized format values.
  * @returns {object|null} Resolved Tr2Shader, or null.
  */
 function resolveShader(effect, values)
@@ -203,7 +203,7 @@ function resolveShader(effect, values)
  * `values.classes`.
  *
  * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect payload.
- * @param {object} values Normalized reader values.
+ * @param {object} values Normalized format values.
  * @returns {Tr2EffectRes|object} The raw Tr2EffectRes instance, or the documented JSON graph.
  */
 export function readWithValues(input, values)
@@ -221,7 +221,7 @@ export function readWithValues(input, values)
  * decoded graph.
  *
  * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect payload.
- * @param {object} values Normalized reader values.
+ * @param {object} values Normalized format values.
  * @returns {object} Plain summary data.
  */
 export function inspectWithValues(input, values)

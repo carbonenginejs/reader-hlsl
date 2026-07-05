@@ -1,1 +1,1 @@
-export { CjsHlslReader, default } from "./CjsHlslReader.js";
+export { CjsFormatHlsl, default } from "./CjsFormatHlsl.js";

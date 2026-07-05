@@ -1,4 +1,4 @@
-carbonenginejs/reader-hlsl
+carbonenginejs/format-hlsl
 ==========================
 
 A pure-JavaScript reader for CCP's Tr2 compiled effect container format

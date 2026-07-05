@@ -1,4 +1,4 @@
-# @carbonenginejs/reader-hlsl
+# @carbonenginejs/format-hlsl
 
 Pure-JavaScript CarbonEngineJS-facing reader for CCP's Tr2 compiled effect
 container format. No native tooling, no build step; it runs in Node and the
@@ -10,7 +10,7 @@ effect header (version, string table, permutation axes and compiled-body
 offsets) and, per resolved permutation, the technique/pass table and
 per-stage constant, resource, sampler and render-state metadata. Shader
 bytecode bodies stay as opaque bytes; decoding DXBC/HLSL bytecode itself is
-`@carbonenginejs/reader-dxbc`'s job, not this package's — `@carbonenginejs/reader-hlsl` has zero dependency
+`@carbonenginejs/format-dxbc`'s job, not this package's — `@carbonenginejs/format-hlsl` has zero dependency
 on it.
 
 CarbonEngine and Fenris Creations (CCP Games) are named in this package because
@@ -19,35 +19,35 @@ interoperability. This package is not affiliated with or endorsed by CCP Games.
 
 ## Package
 
-- npm: <https://www.npmjs.com/package/@carbonenginejs/reader-hlsl>
-- package: `@carbonenginejs/reader-hlsl`
+- npm: <https://www.npmjs.com/package/@carbonenginejs/format-hlsl>
+- package: `@carbonenginejs/format-hlsl`
 - version: `0.1.0`
 - license: `MIT`
 - runtime: Node `>=18`, modern browsers
-- module: ESM, package root exports `CjsHlslReader`
+- module: ESM, package root exports `CjsFormatHlsl`
 
 ## Install
 
 ```sh
-npm install @carbonenginejs/reader-hlsl
+npm install @carbonenginejs/format-hlsl
 ```
 
 ## Public API
 
-The package root exports one public class: `CjsHlslReader`. The `Cjs`
-prefix marks this as a CarbonEngineJS reader/construction boundary, not an
+The package root exports one public class: `CjsFormatHlsl`. The `Cjs`
+prefix marks this as a CarbonEngineJS format/construction boundary, not an
 engine runtime class.
 
-**The public contract is data, not classes.** `CjsHlslReader` exports no
+**The public contract is data, not classes.** `CjsFormatHlsl` exports no
 Tr2/effect model classes. The Tr2 container parser is internal machinery
 under `src/core/tr2` (not part of this package's public surface — do not
 import from it). The documented JSON graph shape below is what callers
 should depend on.
 
 ```js
-import CjsHlslReader from "@carbonenginejs/reader-hlsl";
+import CjsFormatHlsl from "@carbonenginejs/format-hlsl";
 
-const reader = new CjsHlslReader({
+const reader = new CjsFormatHlsl({
     emit: "json",              // "json" (default) | "raw"
     source: "myeffect.sm_hi",  // name used in error details
     permutation: null,         // null/default | Map | [{ name, value }]
@@ -69,30 +69,30 @@ const json = reader.Read(bytes);
 const summary = reader.Inspect(bytes);
 const text = JSON.stringify(reader.ToJSON(json));
 
-CjsHlslReader.isSupported(bytes);             // cheap header-only load check
-CjsHlslReader.read(bytes, { emit: "raw" });   // internal Tr2EffectRes graph (unstable)
-await CjsHlslReader.readFile("effect.sm_hi"); // Node-only convenience, same emit rules
+CjsFormatHlsl.isSupported(bytes);             // cheap header-only load check
+CjsFormatHlsl.read(bytes, { emit: "raw" });   // internal Tr2EffectRes graph (unstable)
+await CjsFormatHlsl.readFile("effect.sm_hi"); // Node-only convenience, same emit rules
 ```
 
 The named export is the same class for callers that prefer named imports:
 
 ```js
-import { CjsHlslReader } from "@carbonenginejs/reader-hlsl";
+import { CjsFormatHlsl } from "@carbonenginejs/format-hlsl";
 ```
 
 ## Reader Rules
 
-- The package root exports one public reader class: `CjsHlslReader`.
+- The package root exports one public format class: `CjsFormatHlsl`.
 - Instance methods are PascalCase because reader instances can hydrate or sit
   beside CarbonClasses without colliding with camelCase data fields.
-- Static one-shot methods are camelCase because they live on `CjsHlslReader`
+- Static one-shot methods are camelCase because they live on `CjsFormatHlsl`
   itself, not on hydrated CarbonClass instances.
-- `src/CjsHlslReader.js` is the public reader boundary. Parser machinery lives
+- `src/CjsFormatHlsl.js` is the public format boundary. Parser machinery lives
   under `src/core`; transient CarbonEngine/library-shaped helpers live under
   `src/carbon` until they move to standalone core packages.
 - `Read` / static `read` return JSON by default. `emit: "raw"` exposes the
   internal `Tr2EffectRes` graph for advanced callers and is not a stable schema.
-- `ToJSON` / static `toJSON` converts reader output to JSON-compatible data. It
+- `ToJSON` / static `toJSON` converts format output to JSON-compatible data. It
   does not decode embedded shader bytecode and is not a writer.
 - Shared schema, registries, hydration utilities, and decorators belong in the
   future `@carbonenginejs/core-types` package.
@@ -114,12 +114,12 @@ Root
             ├─ resources / uavs: Resource[]
             ├─ samplers: Sampler[]
             ├─ signature: { pipelineInputs, registers, threadGroupSize }
-            └─ bytecode: ShaderBytecode | null    // opaque bytes; hand to @carbonenginejs/reader-dxbc
+            └─ bytecode: ShaderBytecode | null    // opaque bytes; hand to @carbonenginejs/format-dxbc
 ```
 
 By default `effect` resolves the permutation's *default* option set (Carbon's
 own default-permutation rule). Pick a different one with the `permutation`
-option: `CjsHlslReader.read(bytes, { permutation: [{ name: "BLEND_MODE", value: "TRANSPARENT" }] })`
+option: `CjsFormatHlsl.read(bytes, { permutation: [{ name: "BLEND_MODE", value: "TRANSPARENT" }] })`
 (also accepts a `Map`), forwarded to the same resolution Carbon's own
 `Tr2EffectRes.GetShader` uses.
 
@@ -139,24 +139,24 @@ without building the full JSON graph.
 
 ## Class hydration (`classes` option)
 
-`CjsHlslReader` exports no model classes, but a caller can register
+`CjsFormatHlsl` exports no model classes, but a caller can register
 constructors for specific node kinds in the JSON graph; matching nodes are
 instantiated with `new` and populated with that node's usual fields instead
 of a plain object literal:
 
 ```js
-import CjsHlslReader from "@carbonenginejs/reader-hlsl";
+import CjsFormatHlsl from "@carbonenginejs/format-hlsl";
 
-CjsHlslReader.CLASS_KEYS;
+CjsFormatHlsl.CLASS_KEYS;
 // ["Root", "Permutation", "EffectDescription", "Technique", "Pass",
 //  "StageInput", "Constant", "Resource", "Sampler", "ShaderBytecode"]
 
-const result = CjsHlslReader.read(bytes, {
+const result = CjsFormatHlsl.read(bytes, {
     classes: { Technique: MyTechnique, StageInput: MyStageInput }
 });
 
 // or on a reusable profile:
-const reader = new CjsHlslReader();
+const reader = new CjsFormatHlsl();
 reader.SetClass("Technique", MyTechnique);
 reader.SetClasses({ StageInput: MyStageInput });
 reader.HasClass("Technique");  // true
