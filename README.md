@@ -34,19 +34,37 @@ should depend on.
 ```js
 import CjsHlslReader from "@carbonenginejs/reader-hlsl";
 
-// One-shot statics (camelCase by convention)
-CjsHlslReader.isSupported(bytes);                 // cheap header-only load check
-CjsHlslReader.inspect(bytes);                     // header + default-permutation summary
-CjsHlslReader.read(bytes);                        // documented plain JSON effect graph
-CjsHlslReader.read(bytes, { emit: "raw" });       // internal Tr2EffectRes graph (unstable)
-await CjsHlslReader.readFile("effect.sm_hi");     // Node-only convenience, same emit rules
-
-// Reusable profile
 const reader = new CjsHlslReader({
-    emit: "json",                 // "json" (default) | "raw"
-    source: "myeffect.sm_hi"      // name used in error details
+    emit: "json",              // "json" (default) | "raw"
+    source: "myeffect.sm_hi",  // name used in error details
+    permutation: null,         // null/default | Map | [{ name, value }]
+    classes: {
+        Root: CjsHlslRoot,
+        Permutation: CjsHlslPermutation,
+        EffectDescription: CjsHlslEffectDescription,
+        Technique: CjsHlslTechnique,
+        Pass: CjsHlslPass,
+        StageInput: CjsHlslStageInput,
+        Constant: CjsHlslConstant,
+        Resource: CjsHlslResource,
+        Sampler: CjsHlslSampler,
+        ShaderBytecode: CjsHlslShaderBytecode,
+    }
 });
-const result = reader.Read(bytes);
+
+const json = reader.Read(bytes);
+const summary = reader.Inspect(bytes);
+const text = JSON.stringify(reader.ToJSON(json));
+
+CjsHlslReader.isSupported(bytes);             // cheap header-only load check
+CjsHlslReader.read(bytes, { emit: "raw" });   // internal Tr2EffectRes graph (unstable)
+await CjsHlslReader.readFile("effect.sm_hi"); // Node-only convenience, same emit rules
+```
+
+The named export is the same class for callers that prefer named imports:
+
+```js
+import { CjsHlslReader } from "@carbonenginejs/reader-hlsl";
 ```
 
 ## Reader Rules
