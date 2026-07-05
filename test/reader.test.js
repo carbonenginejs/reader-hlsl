@@ -79,6 +79,9 @@ test("toJSON converts typed arrays and nested structures", () =>
         nested: [ { mask: new Uint8Array([ 3 ]) } ]
     });
     assert.deepEqual(converted, { tokens: [ 1, 2 ], nested: [ { mask: [ 3 ] } ] });
+
+    const reader = new CjsHlslReader();
+    assert.deepEqual(reader.ToJSON(new Uint8Array([ 4, 5 ])), [ 4, 5 ]);
 });
 
 test("isSupported accepts a well-formed header and rejects garbage or truncated data", () =>

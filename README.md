@@ -1,4 +1,4 @@
-# reader-hlsl
+# @carbonenginejs/reader-hlsl
 
 Pure-JavaScript CarbonEngineJS-facing reader for CCP's Tr2 compiled effect
 container format. No native tooling, no build step; it runs in Node and the
@@ -10,8 +10,14 @@ effect header (version, string table, permutation axes and compiled-body
 offsets) and, per resolved permutation, the technique/pass table and
 per-stage constant, resource, sampler and render-state metadata. Shader
 bytecode bodies stay as opaque bytes; decoding DXBC/HLSL bytecode itself is
-`reader-dxbc`'s job, not this package's — `reader-hlsl` has zero dependency
+`@carbonenginejs/reader-dxbc`'s job, not this package's — `@carbonenginejs/reader-hlsl` has zero dependency
 on it.
+
+## Install
+
+```sh
+npm install @carbonenginejs/reader-hlsl
+```
 
 ## Public API
 
@@ -26,7 +32,7 @@ import from it). The documented JSON graph shape below is what callers
 should depend on.
 
 ```js
-import CjsHlslReader from "reader-hlsl";
+import CjsHlslReader from "@carbonenginejs/reader-hlsl";
 
 // One-shot statics (camelCase by convention)
 CjsHlslReader.isSupported(bytes);                 // cheap header-only load check
@@ -42,6 +48,23 @@ const reader = new CjsHlslReader({
 });
 const result = reader.Read(bytes);
 ```
+
+## Reader Rules
+
+- The package root exports one public reader class: `CjsHlslReader`.
+- Instance methods are PascalCase because reader instances can hydrate or sit
+  beside CarbonClasses without colliding with camelCase data fields.
+- Static one-shot methods are camelCase because they live on `CjsHlslReader`
+  itself, not on hydrated CarbonClass instances.
+- `src/CjsHlslReader.js` is the public reader boundary. Parser machinery lives
+  under `src/core`; transient CarbonEngine/library-shaped helpers live under
+  `src/carbon` until they move to standalone core packages.
+- `Read` / static `read` return JSON by default. `emit: "raw"` exposes the
+  internal `Tr2EffectRes` graph for advanced callers and is not a stable schema.
+- `ToJSON` / static `toJSON` converts reader output to JSON-compatible data. It
+  does not decode embedded shader bytecode and is not a writer.
+- Shared schema, registries, hydration utilities, and decorators belong in the
+  future `@carbonenginejs/core-types` package.
 
 ### The JSON graph (`emit: "json"`, the default)
 
@@ -60,7 +83,7 @@ Root
             ├─ resources / uavs: Resource[]
             ├─ samplers: Sampler[]
             ├─ signature: { pipelineInputs, registers, threadGroupSize }
-            └─ bytecode: ShaderBytecode | null    // opaque bytes; hand to reader-dxbc
+            └─ bytecode: ShaderBytecode | null    // opaque bytes; hand to @carbonenginejs/reader-dxbc
 ```
 
 By default `effect` resolves the permutation's *default* option set (Carbon's
@@ -91,7 +114,7 @@ instantiated with `new` and populated with that node's usual fields instead
 of a plain object literal:
 
 ```js
-import CjsHlslReader from "reader-hlsl";
+import CjsHlslReader from "@carbonenginejs/reader-hlsl";
 
 CjsHlslReader.CLASS_KEYS;
 // ["Root", "Permutation", "EffectDescription", "Technique", "Pass",
@@ -136,3 +159,9 @@ decoded, zero failures.
 ## License
 
 MIT (see `LICENSE` and `NOTICE`).
+
+This package contains no CarbonEngine or Fenris Creations/CCP code. Its Tr2
+container layout and data-shape model were reverse-engineered from compiled
+effect files, historical GLES shader assets, and observed CarbonEngine
+source-code structure. Those sources informed field names and layout
+hypotheses; the implementation is original CarbonEngineJS code.

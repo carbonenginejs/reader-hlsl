@@ -174,6 +174,17 @@ export class CjsHlslReader
     }
 
     /**
+     * Convert reader output to JSON-compatible data.
+     *
+     * @param {any} value Reader output to convert.
+     * @returns {any} Plain JSON-compatible data.
+     */
+    ToJSON(value)
+    {
+        return toJsonValue(value);
+    }
+
+    /**
      * Static payload sniff. Static methods use camelCase by convention.
      *
      * The Tr2 effect container has no magic number, so this attempts a
