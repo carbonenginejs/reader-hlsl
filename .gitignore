@@ -3,11 +3,15 @@ node_modules/
 .DS_Store
 
 # Local agent/tool state. The org root owns durable agent KB by default.
+.agent/
 .agents/
 .claude/
 .codex/
 .skill/
 .skills/
+review/
+_review/
+carbonenginejs.md
 
 # External corpus assets (only supplied through HLSL_CORPUS_DIR; never commit game assets)
 /.cache/
