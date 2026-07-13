@@ -56,6 +56,7 @@ export class Tr2EffectBindingManifest
    * @param {number} [query.stageType] Trinity stage enum value.
    * @param {string} [query.stageName] Stage name.
    * @param {string} query.symbol Generated symbol such as `cb0` or `t3`.
+   * @param {number} [query.registerSpace] Optional D3D register-space disambiguator.
    * @returns {object|null} Matching binding record, or null.
    */
     resolve(query) 
@@ -66,7 +67,10 @@ export class Tr2EffectBindingManifest
       (Number.isInteger(query.stageType) ? entry.stageType === query.stageType : entry.stageName === query.stageName)
         );
         if (!stage) return null;
-        return stage.bindings.find((entry) => entry.generatedSymbol === query.symbol) || null;
+        return stage.bindings.find((entry) =>
+            entry.generatedSymbol === query.symbol &&
+            (!Number.isInteger(query.registerSpace) || entry.registerSpace === query.registerSpace)
+        ) || null;
     }
 
     /**
@@ -158,9 +162,13 @@ function buildStage(effectDescription, techniqueName, passIndex, pass, stageType
     {
         const binding = buildRegisterBinding(effectDescription, pass, stageType, stage, register);
         if (!binding) continue;
-        seen.add(binding.generatedSymbol);
+        const identity = bindingIdentity(binding.kind, binding.registerSpace, binding.registerIndex);
+        if (seen.has(identity)) continue;
+        seen.add(identity);
         bindings.push(binding);
     }
+
+    addSignatureSamplerBindings(effectDescription, pass, stageType, stage, bindings, seen);
 
     addMapBindings(effectDescription, pass, stageType, stage, bindings, seen, "resource", "t", stage.resources);
     addMapBindings(effectDescription, pass, stageType, stage, bindings, seen, "sampler", "s", stage.samplers);
@@ -177,6 +185,50 @@ function buildStage(effectDescription, techniqueName, passIndex, pass, stageType
         threadGroupSize: cloneJson(stage.signature?.threadGroupSize || null),
         bindings
     };
+}
+
+/**
+ * Adds v13+ static samplers, which Carbon stores separately from the general
+ * signature register list. In particular, SM 5.1 effects may declare `s0`
+ * only in `signature.samplers`.
+ *
+ * @param {object} effectDescription Decoded effect description.
+ * @param {object} pass Pass metadata.
+ * @param {number} stageType Stage enum value.
+ * @param {object} stage Stage input metadata.
+ * @param {object[]} bindings Destination bindings.
+ * @param {Set<string>} seen Class/space/register identities already added.
+ */
+function addSignatureSamplerBindings(effectDescription, pass, stageType, stage, bindings, seen)
+{
+    for (const sampler of stage.signature?.samplers || [])
+    {
+        if (!Number.isInteger(sampler?.registerIndex)) continue;
+        const registerSpace = Number.isInteger(sampler.registerSpace) ? sampler.registerSpace : stageType;
+        const identity = bindingIdentity("sampler", registerSpace, sampler.registerIndex);
+        if (seen.has(identity)) continue;
+        const mapMetadata = stage.samplers.get(sampler.registerIndex) || null;
+        const name = metadataName("sampler", mapMetadata || sampler, stage, sampler.registerIndex);
+        bindings.push({
+            kind: "sampler",
+            generatedSymbol: `s${sampler.registerIndex}`,
+            registerIndex: sampler.registerIndex,
+            registerType: 1,
+            registerSpace,
+            registerCount: 1,
+            arrayCount: 1,
+            dynamic: Boolean(mapMetadata?.sampler?.isDynamic),
+            metadataName: name,
+            carbon: {
+                name: mapMetadata?.name || null,
+                sampler: cloneJson(sampler.sampler)
+            },
+            annotations: annotationsFor(effectDescription, name),
+            heapView: isHeapView(pass, "sampler", stageType, sampler.registerIndex),
+            sourceTruth: "carbon-signature-sampler"
+        });
+        seen.add(identity);
+    }
 }
 
 /**
@@ -229,14 +281,21 @@ function addMapBindings(effectDescription, pass, stageType, stage, bindings, see
 {
     for (const [ registerIndex, metadata ] of map.entries()) 
     {
+        // Carbon register maps do not carry a register space. When an exact
+        // signature source already names this class/index, it wins regardless
+        // of space; treating stageType as an additional exact space would
+        // manufacture duplicate SM 5.1 bindings.
+        if (bindings.some((entry) => entry.kind === kind && entry.registerIndex === registerIndex)) continue;
+        const registerSpace = stageType;
+        const identity = bindingIdentity(kind, registerSpace, registerIndex);
         const generatedSymbol = `${prefix}${registerIndex}`;
-        if (seen.has(generatedSymbol)) continue;
+        if (seen.has(identity)) continue;
         bindings.push({
             kind,
             generatedSymbol,
             registerIndex,
             registerType: null,
-            registerSpace: stageType,
+            registerSpace,
             registerCount: metadata?.arrayElements || 1,
             arrayCount: metadata?.arrayElements || 1,
             dynamic: true,
@@ -246,8 +305,21 @@ function addMapBindings(effectDescription, pass, stageType, stage, bindings, see
             heapView: isHeapView(pass, kind, stageType, registerIndex),
             sourceTruth: "carbon-register-map"
         });
-        seen.add(generatedSymbol);
+        seen.add(identity);
     }
+}
+
+/**
+ * Builds a class-aware identity for one D3D register binding.
+ *
+ * @param {string} kind Binding class.
+ * @param {number} registerSpace D3D register space.
+ * @param {number} registerIndex D3D register index.
+ * @returns {string} Stable identity.
+ */
+function bindingIdentity(kind, registerSpace, registerIndex)
+{
+    return `${kind}:${registerSpace}:${registerIndex}`;
 }
 
 /**

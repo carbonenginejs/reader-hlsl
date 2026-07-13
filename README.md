@@ -82,6 +82,31 @@ The named export is the same class for callers that prefer named imports:
 import { CjsFormatHlsl } from "@carbonenginejs/format-hlsl";
 ```
 
+Advanced/unstable named exports are also available for tooling that needs one
+parse plus one permutation/manifest pass without changing the stable reader
+emits:
+
+```js
+import {
+    readEffectAnalysis,
+    Tr2EffectBindingManifest
+} from "@carbonenginejs/format-hlsl";
+
+const analysis = readEffectAnalysis(bytes, {
+    source: "effect.sm_hi",
+    permutation: [ { name: "BLEND_MODE", value: "TRANSPARENT" } ]
+});
+
+analysis.selection.bodyIndex;
+analysis.bindingManifest instanceof Tr2EffectBindingManifest;
+```
+
+`readEffectAnalysis(...)` is an advanced helper and may change shape without a
+major version bump. It returns the loaded `Tr2EffectRes`, resolved `Tr2Shader`,
+selected-option/body-index data, resolved effect description, and a
+`Tr2EffectBindingManifest`. The stable `emit: "metadata"` contract remains
+bytecode-free by design.
+
 ## Reader Rules
 
 - The package root exports one public format class: `CjsFormatHlsl`.
